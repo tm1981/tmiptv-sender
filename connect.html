@@ -42,10 +42,10 @@ button:disabled { background: #ccc; cursor: default; }
 <body>
 
 <h1>IPTV Setup</h1>
-<p class="sub">Connect your phone to the TV and enter your Xtream Code credentials.</p>
+<p class="sub">Enter your Xtream Code credentials to connect the TV.</p>
 
 <div id="statusWrap">
-    <div id="statusMsg">Searching for TV on your network&hellip;</div>
+    <div id="statusMsg">Ready. Fill in your credentials below.</div>
 </div>
 
 <form id="form">
@@ -64,68 +64,35 @@ button:disabled { background: #ccc; cursor: default; }
         <input type="password" id="password" name="password"
                autocomplete="current-password" required/>
     </div>
-    <button type="submit" id="submitBtn">Connect to TV</button>
+    <button type="submit" id="submitBtn">Send to TV</button>
 </form>
 
-<!-- msf.js must be in the same folder as this file -->
-<script src="msf-2.3.4.min.js"></script>
 <script>
 (function () {
-    var APP_ID     = 'xU6oRnsP2N.tmiptv';
-    var CHANNEL_ID = 'com.techmobile.tmiptv';
+    var NTFY_BASE = 'https://ntfy.sh/';
 
     var statusEl  = document.getElementById('statusMsg');
     var formEl    = document.getElementById('form');
     var submitBtn = document.getElementById('submitBtn');
-    var tvApp     = null;
 
     function setStatus(msg, type) {
         statusEl.textContent = msg;
         statusEl.className   = type || '';
     }
 
-    // Search for the TV on the local network via SSDP/mDNS
-    var search = msf.search();
+    // Topic is passed by the TV via QR code: ...connect.html?topic=tmiptv-xxxxx
+    var params = new URLSearchParams(window.location.search);
+    var topic  = params.get('topic');
 
-    search.on('found', function (service) {
-        setStatus('TV found — connecting to channel\u2026');
-        search.stop();
+    if (!topic) {
+        setStatus('Missing topic in URL. Please scan the QR code on your TV again.', 'err');
+    } else {
+        formEl.style.display = 'block';
+    }
 
-        tvApp = service.application(APP_ID, CHANNEL_ID);
-
-        tvApp.connect(function (err) {
-            if (err) {
-                setStatus('Could not connect to TV channel. Make sure the IPTV app is open.', 'err');
-                return;
-            }
-
-            setStatus('Connected! Fill in your credentials below.', 'ok');
-            formEl.style.display = 'block';
-        });
-    });
-
-    search.on('lost', function () {
-        // A TV left the network — not critical during initial search
-    });
-
-    search.start();
-
-    // Timeout if no TV found after 15 s
-    setTimeout(function () {
-        if (formEl.style.display !== 'block') {
-            search.stop();
-            setStatus(
-                'No TV found on this network. Make sure your phone and TV are on the same Wi-Fi, ' +
-                'then reload this page.',
-                'err'
-            );
-        }
-    }, 15000);
-
-    // Form submit → send credentials to TV
     formEl.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!tvApp) { return; }
+        if (!topic) { return; }
 
         var creds = {
             server:   document.getElementById('server').value.trim(),
@@ -133,9 +100,19 @@ button:disabled { background: #ccc; cursor: default; }
             password: document.getElementById('password').value.trim()
         };
 
-        tvApp.publish('iptv.credentials', JSON.stringify(creds));
-        setStatus('Credentials sent — check your TV!', 'ok');
         submitBtn.disabled = true;
+        setStatus('Sending to TV\u2026');
+
+        fetch(NTFY_BASE + encodeURIComponent(topic), {
+            method: 'POST',
+            body: JSON.stringify(creds)
+        }).then(function (res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            setStatus('Sent! Check your TV.', 'ok');
+        }).catch(function (err) {
+            submitBtn.disabled = false;
+            setStatus('Could not send: ' + (err.message || err), 'err');
+        });
     });
 }());
 </script>
