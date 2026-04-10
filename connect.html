@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPTV Setup</title>
+<style>
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding: 24px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f0eb; color: #1a1a2e; min-height: 100vh;
+}
+h1   { font-size: 22px; margin: 0 0 6px; color: #7b341e; }
+.sub { font-size: 14px; color: #666; margin: 0 0 20px; }
+
+#statusWrap { margin-bottom: 20px; }
+#statusMsg  {
+    padding: 12px 16px; border-radius: 10px; font-size: 14px;
+    background: #fff3cd; color: #856404;
+}
+#statusMsg.ok  { background: #e8f4e8; color: #2d6a2d; }
+#statusMsg.err { background: #fce8e8; color: #8b1a1a; }
+
+#form { display: none; }
+label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #333; }
+.field { margin-bottom: 16px; }
+input {
+    width: 100%; padding: 12px 14px; font-size: 16px;
+    border: 1.5px solid #ccc; border-radius: 10px;
+    outline: none; background: #fff; transition: border-color .2s;
+}
+input:focus { border-color: #d98952; }
+button {
+    width: 100%; padding: 14px; font-size: 17px; font-weight: 700;
+    color: #fff; background: #d98952; border: none; border-radius: 12px;
+    cursor: pointer; margin-top: 4px;
+}
+button:disabled { background: #ccc; cursor: default; }
+</style>
+</head>
+<body>
+
+<h1>IPTV Setup</h1>
+<p class="sub">Connect your phone to the TV and enter your Xtream Code credentials.</p>
+
+<div id="statusWrap">
+    <div id="statusMsg">Searching for TV on your network&hellip;</div>
+</div>
+
+<form id="form">
+    <div class="field">
+        <label for="server">Server URL</label>
+        <input type="url" id="server" name="server"
+               placeholder="http://yourserver.com:8080" required/>
+    </div>
+    <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"
+               autocomplete="username" required/>
+    </div>
+    <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               autocomplete="current-password" required/>
+    </div>
+    <button type="submit" id="submitBtn">Connect to TV</button>
+</form>
+
+<!-- msf.js must be in the same folder as this file -->
+<script src="msf-2.3.4.min.js"></script>
+<script>
+(function () {
+    var APP_ID     = 'xU6oRnsP2N.tmiptv';
+    var CHANNEL_ID = 'com.techmobile.tmiptv';
+
+    var statusEl  = document.getElementById('statusMsg');
+    var formEl    = document.getElementById('form');
+    var submitBtn = document.getElementById('submitBtn');
+    var tvApp     = null;
+
+    function setStatus(msg, type) {
+        statusEl.textContent = msg;
+        statusEl.className   = type || '';
+    }
+
+    // Search for the TV on the local network via SSDP/mDNS
+    var search = msf.search();
+
+    search.on('found', function (service) {
+        setStatus('TV found — connecting to channel\u2026');
+        search.stop();
+
+        tvApp = service.application(APP_ID, CHANNEL_ID);
+
+        tvApp.connect(function (err) {
+            if (err) {
+                setStatus('Could not connect to TV channel. Make sure the IPTV app is open.', 'err');
+                return;
+            }
+
+            setStatus('Connected! Fill in your credentials below.', 'ok');
+            formEl.style.display = 'block';
+        });
+    });
+
+    search.on('lost', function () {
+        // A TV left the network — not critical during initial search
+    });
+
+    search.start();
+
+    // Timeout if no TV found after 15 s
+    setTimeout(function () {
+        if (formEl.style.display !== 'block') {
+            search.stop();
+            setStatus(
+                'No TV found on this network. Make sure your phone and TV are on the same Wi-Fi, ' +
+                'then reload this page.',
+                'err'
+            );
+        }
+    }, 15000);
+
+    // Form submit → send credentials to TV
+    formEl.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!tvApp) { return; }
+
+        var creds = {
+            server:   document.getElementById('server').value.trim(),
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value.trim()
+        };
+
+        tvApp.publish('iptv.credentials', JSON.stringify(creds));
+        setStatus('Credentials sent — check your TV!', 'ok');
+        submitBtn.disabled = true;
+    });
+}());
+</script>
+</body>
+</html>
