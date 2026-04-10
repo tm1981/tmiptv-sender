@@ -80,19 +80,41 @@ button:disabled { background: #ccc; cursor: default; }
         statusEl.className   = type || '';
     }
 
-    // Topic is passed by the TV via QR code: ...connect.html?topic=tmiptv-xxxxx
+    function b64urlEncode(bytes) {
+        var s = '';
+        for (var i = 0; i < bytes.length; i++) { s += String.fromCharCode(bytes[i]); }
+        return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function b64urlDecode(str) {
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (str.length % 4) { str += '='; }
+        var s = atob(str);
+        var bytes = new Uint8Array(s.length);
+        for (var i = 0; i < s.length; i++) { bytes[i] = s.charCodeAt(i); }
+        return bytes;
+    }
+
+    // Topic comes from ?topic=... (sent to server)
+    // Key comes from #k=...     (stays on the client — never sent to ntfy/github)
     var params = new URLSearchParams(window.location.search);
     var topic  = params.get('topic');
 
-    if (!topic) {
-        setStatus('Missing topic in URL. Please scan the QR code on your TV again.', 'err');
-    } else {
-        formEl.style.display = 'block';
+    var keyB64 = null;
+    var hash = window.location.hash || '';
+    if (hash.indexOf('#') === 0) { hash = hash.substring(1); }
+    var hashParams = new URLSearchParams(hash);
+    keyB64 = hashParams.get('k');
+
+    if (!topic || !keyB64) {
+        setStatus('Missing topic or key in URL. Please scan the QR code on your TV again.', 'err');
+        return;
     }
+
+    formEl.style.display = 'block';
 
     formEl.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (!topic) { return; }
 
         var creds = {
             server:   document.getElementById('server').value.trim(),
@@ -101,11 +123,35 @@ button:disabled { background: #ccc; cursor: default; }
         };
 
         submitBtn.disabled = true;
-        setStatus('Sending to TV\u2026');
+        setStatus('Encrypting\u2026');
 
-        fetch(NTFY_BASE + encodeURIComponent(topic), {
-            method: 'POST',
-            body: JSON.stringify(creds)
+        var keyBytes;
+        try { keyBytes = b64urlDecode(keyB64); }
+        catch (err) {
+            submitBtn.disabled = false;
+            setStatus('Bad key in URL. Rescan the TV QR code.', 'err');
+            return;
+        }
+
+        var iv = window.crypto.getRandomValues(new Uint8Array(12));
+        var plaintext = new TextEncoder().encode(JSON.stringify(creds));
+
+        window.crypto.subtle.importKey(
+            'raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']
+        ).then(function (key) {
+            return window.crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv }, key, plaintext
+            );
+        }).then(function (ctBuf) {
+            var envelope = {
+                iv: b64urlEncode(iv),
+                ct: b64urlEncode(new Uint8Array(ctBuf))
+            };
+            setStatus('Sending to TV\u2026');
+            return fetch(NTFY_BASE + encodeURIComponent(topic), {
+                method: 'POST',
+                body: JSON.stringify(envelope)
+            });
         }).then(function (res) {
             if (!res.ok) { throw new Error('HTTP ' + res.status); }
             setStatus('Sent! Check your TV.', 'ok');
