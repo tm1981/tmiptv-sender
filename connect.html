@@ -3,86 +3,425 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>IPTV Setup</title>
+<title>tmiptv Connect</title>
 <style>
 * { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+}
+
 body {
-    margin: 0; padding: 24px 16px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f5f0eb; color: #1a1a2e; min-height: 100vh;
+    min-height: 100vh;
+    background: #0b121d;
+    color: #e5e7eb;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
-h1   { font-size: 22px; margin: 0 0 6px; color: #7b341e; }
-.sub { font-size: 14px; color: #666; margin: 0 0 20px; }
 
-#statusWrap { margin-bottom: 20px; }
-#statusMsg  {
-    padding: 12px 16px; border-radius: 10px; font-size: 14px;
-    background: #fff3cd; color: #856404;
+img {
+    display: block;
+    max-width: 100%;
 }
-#statusMsg.ok  { background: #e8f4e8; color: #2d6a2d; }
-#statusMsg.err { background: #fce8e8; color: #8b1a1a; }
 
-#form { display: none; }
-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #333; }
-.field { margin-bottom: 16px; }
+button,
 input {
-    width: 100%; padding: 12px 14px; font-size: 16px;
-    border: 1.5px solid #ccc; border-radius: 10px;
-    outline: none; background: #fff; transition: border-color .2s;
+    font: inherit;
 }
-input:focus { border-color: #d98952; }
+
+.page-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.brand-band {
+    padding: 32px 20px 28px;
+    background: linear-gradient(155deg, #927123 0%, #5a6d45 45%, #2a6d83 100%);
+}
+
+.brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.14);
+    padding: 10px;
+}
+
+.eyebrow {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(243, 244, 246, 0.84);
+}
+
+h1 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1;
+    color: #f8fafc;
+}
+
+.lead {
+    margin: 10px 0 0;
+    max-width: 34rem;
+    font-size: 15px;
+    line-height: 1.55;
+    color: rgba(243, 244, 246, 0.92);
+}
+
+.promise-list {
+    margin: 22px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.promise-list li {
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 14px;
+    line-height: 1.45;
+    color: rgba(248, 250, 252, 0.92);
+}
+
+.promise-list li:last-child {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.form-section {
+    padding: 28px 20px 36px;
+    background: linear-gradient(180deg, #232d3a 0%, #1a2330 100%);
+}
+
+.section-head {
+    margin-bottom: 24px;
+}
+
+.kicker {
+    margin: 0 0 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #f2b50c;
+}
+
+h2 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.1;
+    color: #f8fafc;
+}
+
+.section-copy {
+    margin: 12px 0 0;
+    max-width: 32rem;
+    font-size: 15px;
+    line-height: 1.55;
+    color: rgba(229, 231, 235, 0.78);
+}
+
+.status-banner {
+    min-height: 56px;
+    padding: 14px 16px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.38);
+    font-size: 14px;
+    line-height: 1.5;
+    color: #dbe4ef;
+}
+
+.status-banner.is-idle {
+    border-color: rgba(148, 163, 184, 0.22);
+    color: #dbe4ef;
+}
+
+.status-banner.is-wait {
+    border-color: rgba(42, 109, 131, 0.68);
+    background: rgba(27, 77, 95, 0.34);
+    color: #d7f1ff;
+}
+
+.status-banner.is-ok {
+    border-color: rgba(74, 160, 108, 0.72);
+    background: rgba(39, 87, 57, 0.34);
+    color: #d9f7dd;
+}
+
+.status-banner.is-err {
+    border-color: rgba(220, 94, 94, 0.7);
+    background: rgba(96, 32, 32, 0.36);
+    color: #ffd5d5;
+}
+
+form {
+    margin-top: 22px;
+}
+
+.field {
+    margin-bottom: 16px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #d7dee7;
+}
+
+input {
+    width: 100%;
+    height: 56px;
+    padding: 0 16px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.44);
+    color: #f8fafc;
+}
+
+input::placeholder {
+    color: rgba(203, 213, 225, 0.62);
+}
+
+input:focus {
+    outline: none;
+    border-color: #eab308;
+    box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.18);
+}
+
 button {
-    width: 100%; padding: 14px; font-size: 17px; font-weight: 700;
-    color: #fff; background: #d98952; border: none; border-radius: 12px;
-    cursor: pointer; margin-top: 4px;
+    width: 100%;
+    height: 56px;
+    margin-top: 8px;
+    border: none;
+    border-radius: 8px;
+    background: #e0a308;
+    color: #0b1220;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
 }
-button:disabled { background: #ccc; cursor: default; }
+
+button:hover,
+button:focus {
+    background: #f2b50c;
+    outline: none;
+}
+
+button:disabled {
+    background: #6b7280;
+    color: #e5e7eb;
+    cursor: default;
+}
+
+.privacy-note {
+    margin: 18px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(203, 213, 225, 0.74);
+}
+
+@media (min-width: 900px) {
+    .page-shell {
+        grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.05fr);
+    }
+
+    .brand-band,
+    .form-section {
+        min-height: 100vh;
+        padding: 54px 48px;
+    }
+
+    .brand-band {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .brand-lockup {
+        align-items: flex-start;
+        gap: 22px;
+    }
+
+    .brand-mark {
+        width: 92px;
+        height: 92px;
+        border-radius: 24px;
+        padding: 12px;
+    }
+
+    h1 {
+        font-size: 56px;
+    }
+
+    .lead {
+        font-size: 18px;
+        max-width: 28rem;
+    }
+
+    .promise-list {
+        margin-top: 32px;
+        max-width: 30rem;
+    }
+
+    .promise-list li {
+        padding: 14px 0;
+        font-size: 16px;
+    }
+
+    .form-section {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    h2 {
+        font-size: 40px;
+    }
+
+    .section-copy {
+        font-size: 17px;
+    }
+
+    .status-banner {
+        max-width: 34rem;
+        font-size: 15px;
+    }
+
+    form {
+        max-width: 34rem;
+    }
+
+    input,
+    button {
+        height: 62px;
+    }
+}
 </style>
 </head>
 <body>
+<div class="page-shell">
+    <section class="brand-band" aria-label="tmiptv introduction">
+        <div>
+            <div class="brand-lockup">
+                <img class="brand-mark" src="./icon.png" alt="tmiptv"/>
+                <div>
+                    <p class="eyebrow">Secure pairing</p>
+                    <h1>tmiptv Connect</h1>
+                    <p class="lead">Use your phone to sign the TV in once. The TV checks the details before the session opens.</p>
+                </div>
+            </div>
 
-<h1>IPTV Setup</h1>
-<p class="sub">Enter your Xtream Code credentials to connect the TV.</p>
+            <ul class="promise-list">
+                <li>Encrypted on this phone before delivery</li>
+                <li>Matches the TV app flow and Xtream login</li>
+                <li>Retry here if the TV rejects the password</li>
+            </ul>
+        </div>
+    </section>
 
-<div id="statusWrap">
-    <div id="statusMsg">Ready. Fill in your credentials below.</div>
+    <main class="form-section">
+        <div class="section-head">
+            <p class="kicker">Connect your TV</p>
+            <h2>Enter your provider details</h2>
+            <p class="section-copy">Use the same server URL, username, and password from your IPTV provider account.</p>
+        </div>
+
+        <div id="statusMsg" class="status-banner is-idle" role="status" aria-live="polite">Ready. Fill in your credentials below.</div>
+
+        <form id="form">
+            <div class="field">
+                <label for="server">Server URL</label>
+                <input type="url" id="server" name="server" placeholder="http://yourserver.com:8080" autocomplete="url" required/>
+            </div>
+
+            <div class="field">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" autocomplete="username" required/>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" autocomplete="current-password" required/>
+            </div>
+
+            <button type="submit" id="submitBtn">Send to TV</button>
+        </form>
+
+        <p class="privacy-note">Your credentials are encrypted in the browser before they are sent to the TV.</p>
+    </main>
 </div>
-
-<form id="form">
-    <div class="field">
-        <label for="server">Server URL</label>
-        <input type="url" id="server" name="server"
-               placeholder="http://yourserver.com:8080" required/>
-    </div>
-    <div class="field">
-        <label for="username">Username</label>
-        <input type="text" id="username" name="username"
-               autocomplete="username" required/>
-    </div>
-    <div class="field">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password"
-               autocomplete="current-password" required/>
-    </div>
-    <button type="submit" id="submitBtn">Send to TV</button>
-</form>
 
 <script>
 (function () {
     var NTFY_BASE = 'https://ntfy.sh/';
-
-    var statusEl  = document.getElementById('statusMsg');
-    var formEl    = document.getElementById('form');
+    var statusEl = document.getElementById('statusMsg');
+    var formEl = document.getElementById('form');
     var submitBtn = document.getElementById('submitBtn');
+    var serverInput = document.getElementById('server');
+    var usernameInput = document.getElementById('username');
+    var passwordInput = document.getElementById('password');
 
-    function setStatus(msg, type) {
-        statusEl.textContent = msg;
-        statusEl.className   = type || '';
+    var params = new URLSearchParams(window.location.search);
+    var topic = params.get('topic');
+    var replyTopic = params.get('reply');
+
+    var keyB64 = null;
+    var hash = window.location.hash || '';
+    if (hash.indexOf('#') === 0) { hash = hash.substring(1); }
+    var hashParams = new URLSearchParams(hash);
+    keyB64 = hashParams.get('k');
+
+    var activeRequestId = null;
+    var pendingTimer = null;
+    var replyXhr = null;
+    var replyBuffer = '';
+    var replyReadIdx = 0;
+    var replyReconnectTimer = null;
+    var replySince = Math.floor(Date.now() / 1000);
+
+    function setStatus(message, type) {
+        statusEl.textContent = message;
+        statusEl.className = 'status-banner ' + (type ? 'is-' + type : 'is-idle');
+    }
+
+    function setSubmitState(label, disabled) {
+        submitBtn.textContent = label;
+        submitBtn.disabled = !!disabled;
+    }
+
+    function clearPendingTimer() {
+        if (pendingTimer) {
+            clearTimeout(pendingTimer);
+            pendingTimer = null;
+        }
+    }
+
+    function schedulePendingTimer() {
+        clearPendingTimer();
+        pendingTimer = setTimeout(function () {
+            if (!activeRequestId) { return; }
+            activeRequestId = null;
+            setStatus('Still waiting for the TV. You can send the details again.', 'idle');
+            setSubmitState('Send to TV', false);
+        }, 18000);
     }
 
     function b64urlEncode(bytes) {
         var s = '';
-        for (var i = 0; i < bytes.length; i++) { s += String.fromCharCode(bytes[i]); }
+        for (var i = 0; i < bytes.length; i += 1) {
+            s += String.fromCharCode(bytes[i]);
+        }
         return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
 
@@ -91,44 +430,178 @@ button:disabled { background: #ccc; cursor: default; }
         while (str.length % 4) { str += '='; }
         var s = atob(str);
         var bytes = new Uint8Array(s.length);
-        for (var i = 0; i < s.length; i++) { bytes[i] = s.charCodeAt(i); }
+        for (var i = 0; i < s.length; i += 1) {
+            bytes[i] = s.charCodeAt(i);
+        }
         return bytes;
     }
 
-    // Topic comes from ?topic=... (sent to server)
-    // Key comes from #k=...     (stays on the client — never sent to ntfy/github)
-    var params = new URLSearchParams(window.location.search);
-    var topic  = params.get('topic');
+    function randomToken() {
+        var bytes = new Uint8Array(12);
+        window.crypto.getRandomValues(bytes);
+        return b64urlEncode(bytes);
+    }
 
-    var keyB64 = null;
-    var hash = window.location.hash || '';
-    if (hash.indexOf('#') === 0) { hash = hash.substring(1); }
-    var hashParams = new URLSearchParams(hash);
-    keyB64 = hashParams.get('k');
+    function getStatusMessage(payload) {
+        var code = payload && payload.code ? String(payload.code) : '';
+        if (payload && payload.message && payload.status === 'error') {
+            if (code === 'wrong_credentials' || code === 'bad_url' || code === 'network_error' ||
+                code === 'timeout' || code === 'server_rejected' || code === 'invalid_response' ||
+                code === 'could_not_verify' || code === 'invalid_payload') {
+                return mapStatusCode(code);
+            }
+            return payload.message;
+        }
+        return mapStatusCode(code);
+    }
+
+    function mapStatusCode(code) {
+        if (code === 'verifying') { return 'Checking credentials on the TV...'; }
+        if (code === 'connected') { return 'Connected. Continue on your TV.'; }
+        if (code === 'wrong_credentials') { return 'The TV rejected the username or password. Update it and send again.'; }
+        if (code === 'bad_url') { return 'The server URL is not valid. Check it and send again.'; }
+        if (code === 'network_error') { return 'The TV could not reach the provider. Check the URL and try again.'; }
+        if (code === 'timeout') { return 'The provider took too long to answer. Send again in a moment.'; }
+        if (code === 'server_rejected') { return 'The provider rejected the request. Check the details and try again.'; }
+        if (code === 'invalid_response') { return 'The provider returned an invalid response. Check the server URL and try again.'; }
+        if (code === 'could_not_verify') { return 'The TV could not verify these credentials. Check the details and try again.'; }
+        if (code === 'invalid_payload') { return 'The TV received incomplete data. Send the details again.'; }
+        return '';
+    }
+
+    function focusRetryField(code) {
+        if (code === 'bad_url') {
+            serverInput.focus();
+            serverInput.select();
+            return;
+        }
+        if (code === 'wrong_credentials') {
+            passwordInput.focus();
+            passwordInput.select();
+            return;
+        }
+        submitBtn.focus();
+    }
+
+    function handleReplyPayload(payload) {
+        if (!payload || payload.type !== 'pairing-status') { return; }
+        if (!activeRequestId || payload.requestId !== activeRequestId) { return; }
+
+        if (payload.status === 'verifying') {
+            setStatus(getStatusMessage(payload) || 'Checking credentials on the TV...', 'wait');
+            setSubmitState('Checking on TV...', true);
+            schedulePendingTimer();
+            return;
+        }
+
+        clearPendingTimer();
+
+        if (payload.status === 'success') {
+            activeRequestId = null;
+            setStatus(getStatusMessage(payload) || 'Connected. Continue on your TV.', 'ok');
+            setSubmitState('Connected', true);
+            return;
+        }
+
+        if (payload.status === 'error') {
+            var code = payload.code || '';
+            activeRequestId = null;
+            setStatus(getStatusMessage(payload) || 'The TV could not verify these credentials. Try again.', 'err');
+            setSubmitState('Send to TV', false);
+            focusRetryField(code);
+        }
+    }
+
+    function handleReplyLine(line) {
+        var evt;
+        try {
+            evt = JSON.parse(line);
+        } catch (err) {
+            return;
+        }
+        if (evt.event !== 'message' || !evt.message) { return; }
+
+        var payload;
+        try {
+            payload = JSON.parse(evt.message);
+        } catch (err2) {
+            return;
+        }
+        handleReplyPayload(payload);
+    }
+
+    function openReplyStream() {
+        if (!replyTopic) { return; }
+
+        replyBuffer = '';
+        replyReadIdx = 0;
+        replyXhr = new XMLHttpRequest();
+        replyXhr.open('GET', NTFY_BASE + encodeURIComponent(replyTopic) + '/json?since=' + replySince, true);
+
+        replyXhr.onprogress = function () {
+            var text = replyXhr.responseText || '';
+            if (text.length <= replyReadIdx) { return; }
+            replyBuffer += text.substring(replyReadIdx);
+            replyReadIdx = text.length;
+
+            var nl;
+            while ((nl = replyBuffer.indexOf('\n')) !== -1) {
+                var line = replyBuffer.substring(0, nl).trim();
+                replyBuffer = replyBuffer.substring(nl + 1);
+                if (line) { handleReplyLine(line); }
+            }
+        };
+
+        replyXhr.onerror = function () {
+            replyXhr = null;
+            if (replyReconnectTimer) { clearTimeout(replyReconnectTimer); }
+            replyReconnectTimer = setTimeout(openReplyStream, 2000);
+        };
+
+        replyXhr.onload = function () {
+            replyXhr = null;
+            if (replyReconnectTimer) { clearTimeout(replyReconnectTimer); }
+            replyReconnectTimer = setTimeout(openReplyStream, 500);
+        };
+
+        replyXhr.send();
+    }
 
     if (!topic || !keyB64) {
-        setStatus('Missing topic or key in URL. Please scan the QR code on your TV again.', 'err');
+        setStatus('Missing secure pairing details in the URL. Scan the QR code on your TV again.', 'err');
+        setSubmitState('Scan TV QR Again', true);
         return;
     }
 
-    formEl.style.display = 'block';
+    if (replyTopic) {
+        openReplyStream();
+    }
 
-    formEl.addEventListener('submit', function (e) {
-        e.preventDefault();
+    formEl.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        if (formEl.reportValidity && !formEl.reportValidity()) {
+            return;
+        }
 
         var creds = {
-            server:   document.getElementById('server').value.trim(),
-            username: document.getElementById('username').value.trim(),
-            password: document.getElementById('password').value.trim()
+            server: serverInput.value.trim(),
+            username: usernameInput.value.trim(),
+            password: passwordInput.value.trim(),
+            requestId: randomToken()
         };
 
-        submitBtn.disabled = true;
-        setStatus('Encrypting\u2026');
+        activeRequestId = creds.requestId;
+        clearPendingTimer();
+        setSubmitState('Sending...', true);
+        setStatus('Encrypting on this phone...', 'wait');
 
         var keyBytes;
-        try { keyBytes = b64urlDecode(keyB64); }
-        catch (err) {
-            submitBtn.disabled = false;
+        try {
+            keyBytes = b64urlDecode(keyB64);
+        } catch (err) {
+            activeRequestId = null;
+            setSubmitState('Send to TV', false);
             setStatus('Bad key in URL. Rescan the TV QR code.', 'err');
             return;
         }
@@ -136,29 +609,40 @@ button:disabled { background: #ccc; cursor: default; }
         var iv = window.crypto.getRandomValues(new Uint8Array(12));
         var plaintext = new TextEncoder().encode(JSON.stringify(creds));
 
-        window.crypto.subtle.importKey(
-            'raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt']
-        ).then(function (key) {
-            return window.crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: iv }, key, plaintext
-            );
-        }).then(function (ctBuf) {
-            var envelope = {
-                iv: b64urlEncode(iv),
-                ct: b64urlEncode(new Uint8Array(ctBuf))
-            };
-            setStatus('Sending to TV\u2026');
-            return fetch(NTFY_BASE + encodeURIComponent(topic), {
-                method: 'POST',
-                body: JSON.stringify(envelope)
+        window.crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt'])
+            .then(function (key) {
+                return window.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, plaintext);
+            })
+            .then(function (ctBuf) {
+                var envelope = {
+                    iv: b64urlEncode(iv),
+                    ct: b64urlEncode(new Uint8Array(ctBuf))
+                };
+                setStatus('Sending the encrypted details to your TV...', 'wait');
+                return fetch(NTFY_BASE + encodeURIComponent(topic), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(envelope)
+                });
+            })
+            .then(function (res) {
+                if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                if (replyTopic) {
+                    setStatus('Sent. Waiting for TV confirmation...', 'wait');
+                    setSubmitState('Waiting for TV...', true);
+                    schedulePendingTimer();
+                    return;
+                }
+                activeRequestId = null;
+                setStatus('Sent. Check your TV.', 'ok');
+                setSubmitState('Sent', true);
+            })
+            .catch(function (err) {
+                activeRequestId = null;
+                clearPendingTimer();
+                setSubmitState('Send to TV', false);
+                setStatus('Could not send: ' + (err.message || err), 'err');
             });
-        }).then(function (res) {
-            if (!res.ok) { throw new Error('HTTP ' + res.status); }
-            setStatus('Sent! Check your TV.', 'ok');
-        }).catch(function (err) {
-            submitBtn.disabled = false;
-            setStatus('Could not send: ' + (err.message || err), 'err');
-        });
     });
 }());
 </script>
