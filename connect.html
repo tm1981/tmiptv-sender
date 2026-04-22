@@ -392,6 +392,8 @@
             var replyReadIdx = 0;
             var replyReconnectTimer = null;
             var replySince = Math.floor(Date.now() / 1000);
+            var replyDedupeIds = {};
+            var replyDedupeOrder = [];
 
             function setStatus(message, type) {
                 statusEl.textContent = message;
@@ -486,9 +488,38 @@
                 submitBtn.focus();
             }
 
-            function handleReplyPayload(payload) {
+            function rememberReplyDedupeKey(key) {
+                var value = String(key || '');
+                var old;
+                if (!value) { return true; }
+                if (replyDedupeIds[value]) { return false; }
+                replyDedupeIds[value] = true;
+                replyDedupeOrder.push(value);
+                while (replyDedupeOrder.length > 100) {
+                    old = replyDedupeOrder.shift();
+                    if (old) { delete replyDedupeIds[old]; }
+                }
+                return true;
+            }
+
+            function getReplyDedupeKey(evt, payload) {
+                if (evt && evt.id) { return 'event:' + String(evt.id); }
+                if (payload && payload.requestId) {
+                    return 'status:' + String(payload.requestId) + ':' +
+                        String(payload.status || '') + ':' +
+                        String(payload.code || '') + ':' +
+                        String(payload.message || '');
+                }
+                if (evt && evt.time && evt.topic) {
+                    return 'time:' + String(evt.topic) + ':' + String(evt.time);
+                }
+                return '';
+            }
+
+            function handleReplyPayload(payload, evt) {
                 if (!payload || payload.type !== 'pairing-status') { return; }
                 if (!activeRequestId || payload.requestId !== activeRequestId) { return; }
+                if (!rememberReplyDedupeKey(getReplyDedupeKey(evt, payload))) { return; }
 
                 if (payload.status === 'verifying') {
                     setStatus(getStatusMessage(payload) || 'Checking credentials on the TV...', 'wait');
@@ -530,7 +561,7 @@
                 } catch (err2) {
                     return;
                 }
-                handleReplyPayload(payload);
+                handleReplyPayload(payload, evt);
             }
 
             function openReplyStream() {
