@@ -342,20 +342,28 @@
                 credentials below.</div>
 
             <form id="form">
-                <div class="field">
-                    <label for="server">Server URL</label>
-                    <input type="url" id="server" name="server" placeholder="http://yourserver.com:8080"
-                        autocomplete="url" required />
+                <div id="credentialsFields">
+                    <div class="field">
+                        <label for="server">Server URL</label>
+                        <input type="url" id="server" name="server" placeholder="http://yourserver.com:8080"
+                            autocomplete="url" required />
+                    </div>
+
+                    <div class="field">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" autocomplete="username" required />
+                    </div>
+
+                    <div class="field">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" autocomplete="current-password" required />
+                    </div>
                 </div>
 
-                <div class="field">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" autocomplete="username" required />
-                </div>
-
-                <div class="field">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" autocomplete="current-password" required />
+                <div class="field" id="searchField" style="display: none;">
+                    <label for="query">Search text</label>
+                    <input type="search" id="query" name="query" placeholder="Channel, movie, or show name"
+                        autocomplete="off" />
                 </div>
 
                 <button type="submit" id="submitBtn">Send to TV</button>
@@ -374,10 +382,21 @@
             var serverInput = document.getElementById('server');
             var usernameInput = document.getElementById('username');
             var passwordInput = document.getElementById('password');
+            var credentialsFields = document.getElementById('credentialsFields');
+            var searchField = document.getElementById('searchField');
+            var searchInput = document.getElementById('query');
+            var brandTitleEl = document.querySelector('.brand-lockup h1');
+            var leadEl = document.querySelector('.lead');
+            var kickerEl = document.querySelector('.kicker');
+            var formTitleEl = document.querySelector('.section-head h2');
+            var formCopyEl = document.querySelector('.section-copy');
+            var privacyNoteEl = document.querySelector('.privacy-note');
 
             var params = new URLSearchParams(window.location.search);
             var topic = params.get('topic');
             var replyTopic = params.get('reply');
+            var mode = params.get('mode') || '';
+            var isSearchMode = mode === 'search';
 
             var keyB64 = null;
             var hash = window.location.hash || '';
@@ -405,6 +424,10 @@
                 submitBtn.disabled = !!disabled;
             }
 
+            function getIdleSubmitLabel() {
+                return isSearchMode ? 'Send Search' : 'Send to TV';
+            }
+
             function clearPendingTimer() {
                 if (pendingTimer) {
                     clearTimeout(pendingTimer);
@@ -417,8 +440,8 @@
                 pendingTimer = setTimeout(function () {
                     if (!activeRequestId) { return; }
                     activeRequestId = null;
-                    setStatus('Still waiting for the TV. You can send the details again.', 'idle');
-                    setSubmitState('Send to TV', false);
+                    setStatus(isSearchMode ? 'Still waiting for the TV. You can send the search again.' : 'Still waiting for the TV. You can send the details again.', 'idle');
+                    setSubmitState(getIdleSubmitLabel(), false);
                 }, 18000);
             }
 
@@ -445,6 +468,26 @@
                 var bytes = new Uint8Array(12);
                 window.crypto.getRandomValues(bytes);
                 return b64urlEncode(bytes);
+            }
+
+            function configureMode() {
+                if (!isSearchMode) { return; }
+                document.title = 'tmiptv Search';
+                if (brandTitleEl) { brandTitleEl.textContent = 'TMIPTV Search'; }
+                if (leadEl) { leadEl.textContent = 'Use your phone keyboard to send search text to the TV.'; }
+                if (kickerEl) { kickerEl.textContent = 'Search on TV'; }
+                if (formTitleEl) { formTitleEl.textContent = 'Enter search text'; }
+                if (formCopyEl) { formCopyEl.textContent = 'Search channels, movies, and shows without typing on the TV remote.'; }
+                if (privacyNoteEl) { privacyNoteEl.textContent = 'Your search text is encrypted in this browser before it is sent to the TV.'; }
+                if (credentialsFields) { credentialsFields.style.display = 'none'; }
+                if (searchField) { searchField.style.display = 'block'; }
+                if (serverInput) { serverInput.required = false; }
+                if (usernameInput) { usernameInput.required = false; }
+                if (passwordInput) { passwordInput.required = false; }
+                if (searchInput) { searchInput.required = true; }
+                setStatus('Ready. Enter search text below.', 'idle');
+                setSubmitState(getIdleSubmitLabel(), false);
+                try { searchInput.focus(); } catch (err) { }
             }
 
             function getStatusMessage(payload) {
@@ -474,7 +517,22 @@
                 return '';
             }
 
+            function getSearchStatusMessage(payload) {
+                var code = payload && payload.code ? String(payload.code) : '';
+                if (payload && payload.message && payload.status === 'error') { return payload.message; }
+                if (code === 'received') { return 'Search sent. Check your TV.'; }
+                if (code === 'invalid_payload') { return 'The TV could not read that search. Try again.'; }
+                return payload && payload.message ? payload.message : '';
+            }
+
             function focusRetryField(code) {
+                if (isSearchMode) {
+                    if (searchInput) {
+                        searchInput.focus();
+                        searchInput.select();
+                    }
+                    return;
+                }
                 if (code === 'bad_url') {
                     serverInput.focus();
                     serverInput.select();
@@ -516,7 +574,32 @@
                 return '';
             }
 
+            function handleSearchReplyPayload(payload, evt) {
+                if (!payload || payload.type !== 'search-status') { return; }
+                if (!activeRequestId || payload.requestId !== activeRequestId) { return; }
+                if (!rememberReplyDedupeKey(getReplyDedupeKey(evt, payload))) { return; }
+
+                clearPendingTimer();
+                if (payload.status === 'ok' || payload.status === 'success') {
+                    activeRequestId = null;
+                    setStatus(getSearchStatusMessage(payload) || 'Search sent. Check your TV.', 'ok');
+                    setSubmitState('Sent', true);
+                    return;
+                }
+
+                if (payload.status === 'error') {
+                    activeRequestId = null;
+                    setStatus(getSearchStatusMessage(payload) || 'The TV could not receive that search. Try again.', 'err');
+                    setSubmitState(getIdleSubmitLabel(), false);
+                    focusRetryField(payload.code || '');
+                }
+            }
+
             function handleReplyPayload(payload, evt) {
+                if (isSearchMode) {
+                    handleSearchReplyPayload(payload, evt);
+                    return;
+                }
                 if (!payload || payload.type !== 'pairing-status') { return; }
                 if (!activeRequestId || payload.requestId !== activeRequestId) { return; }
                 if (!rememberReplyDedupeKey(getReplyDedupeKey(evt, payload))) { return; }
@@ -541,7 +624,7 @@
                     var code = payload.code || '';
                     activeRequestId = null;
                     setStatus(getStatusMessage(payload) || 'The TV could not verify these credentials. Try again.', 'err');
-                    setSubmitState('Send to TV', false);
+                    setSubmitState(getIdleSubmitLabel(), false);
                     focusRetryField(code);
                 }
             }
@@ -601,6 +684,8 @@
                 replyXhr.send();
             }
 
+            configureMode();
+
             if (!topic || !keyB64) {
                 setStatus('Missing secure pairing details in the URL. Scan the QR code on your TV again.', 'err');
                 setSubmitState('Scan TV QR Again', true);
@@ -618,30 +703,45 @@
                     return;
                 }
 
-                var creds = {
-                    server: serverInput.value.trim(),
-                    username: usernameInput.value.trim(),
-                    password: passwordInput.value.trim(),
-                    requestId: randomToken()
-                };
+                var payload;
+                if (isSearchMode) {
+                    var query = searchInput ? searchInput.value.trim() : '';
+                    if (!query) {
+                        setStatus('Enter search text first.', 'err');
+                        focusRetryField('');
+                        return;
+                    }
+                    payload = {
+                        type: 'search-input',
+                        query: query,
+                        requestId: randomToken()
+                    };
+                } else {
+                    payload = {
+                        server: serverInput.value.trim(),
+                        username: usernameInput.value.trim(),
+                        password: passwordInput.value.trim(),
+                        requestId: randomToken()
+                    };
+                }
 
-                activeRequestId = creds.requestId;
+                activeRequestId = payload.requestId;
                 clearPendingTimer();
                 setSubmitState('Sending...', true);
-                setStatus('Encrypting on this phone...', 'wait');
+                setStatus(isSearchMode ? 'Encrypting search text on this phone...' : 'Encrypting on this phone...', 'wait');
 
                 var keyBytes;
                 try {
                     keyBytes = b64urlDecode(keyB64);
                 } catch (err) {
                     activeRequestId = null;
-                    setSubmitState('Send to TV', false);
+                    setSubmitState(getIdleSubmitLabel(), false);
                     setStatus('Bad key in URL. Rescan the TV QR code.', 'err');
                     return;
                 }
 
                 var iv = window.crypto.getRandomValues(new Uint8Array(12));
-                var plaintext = new TextEncoder().encode(JSON.stringify(creds));
+                var plaintext = new TextEncoder().encode(JSON.stringify(payload));
 
                 window.crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt'])
                     .then(function (key) {
@@ -652,7 +752,7 @@
                             iv: b64urlEncode(iv),
                             ct: b64urlEncode(new Uint8Array(ctBuf))
                         };
-                        setStatus('Sending the encrypted details to your TV...', 'wait');
+                        setStatus(isSearchMode ? 'Sending the encrypted search to your TV...' : 'Sending the encrypted details to your TV...', 'wait');
                         return fetch(NTFY_BASE + encodeURIComponent(topic), {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -662,19 +762,19 @@
                     .then(function (res) {
                         if (!res.ok) { throw new Error('HTTP ' + res.status); }
                         if (replyTopic) {
-                            setStatus('Sent. Waiting for TV confirmation...', 'wait');
+                            setStatus(isSearchMode ? 'Sent. Waiting for TV to receive it...' : 'Sent. Waiting for TV confirmation...', 'wait');
                             setSubmitState('Waiting for TV...', true);
                             schedulePendingTimer();
                             return;
                         }
                         activeRequestId = null;
-                        setStatus('Sent. Check your TV.', 'ok');
+                        setStatus(isSearchMode ? 'Search sent. Check your TV.' : 'Sent. Check your TV.', 'ok');
                         setSubmitState('Sent', true);
                     })
                     .catch(function (err) {
                         activeRequestId = null;
                         clearPendingTimer();
-                        setSubmitState('Send to TV', false);
+                        setSubmitState(getIdleSubmitLabel(), false);
                         setStatus('Could not send: ' + (err.message || err), 'err');
                     });
             });
